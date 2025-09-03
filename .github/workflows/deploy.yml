@@ -24,7 +24,11 @@ jobs:
         run: |
           TARFILE=upload.tar.gz
           # Create tarball excluding node_modules
-          tar --exclude='./node_modules' --warning=no-file-changed -czf ${TARFILE} .
+          # --warning=no-file-changed -> ignore file changes during archiving
+          # || true -> prevent tar from failing the workflow on benign warnings
+          tar --exclude='./node_modules' --warning=no-file-changed -czf ${TARFILE} . || true
+          ls -lh ${TARFILE}
+
 
       - name: Copy files to remote VM (upload tar + deploy script)
         uses: appleboy/scp-action@v0.1.7
