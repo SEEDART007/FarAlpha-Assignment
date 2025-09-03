@@ -23,8 +23,8 @@ jobs:
       - name: Create release tarball
         run: |
           TARFILE=upload.tar.gz
-          # Create tarball containing the repository files (excluding node_modules)
-          tar --exclude='./node_modules' -czf ${TARFILE} .
+          tar --exclude='./node_modules' --warning=no-file-changed -czf ${TARFILE} .
+
 
       - name: Copy files to remote VM (upload tar + deploy script)
         uses: appleboy/scp-action@v0.1.7
