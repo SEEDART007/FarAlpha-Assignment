@@ -17,18 +17,17 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dev deps (so package-lock can be generated if needed)
+      - name: Install dependencies
         run: npm ci || npm install
 
       - name: Create release tarball
         run: |
           TARFILE=upload.tar.gz
           # Create tarball containing the repository files (excluding node_modules)
-          # We create it in the repo root
           tar --exclude='./node_modules' -czf ${TARFILE} .
 
       - name: Copy files to remote VM (upload tar + deploy script)
-        uses: appleboy/scp-action@v0.1.8
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
@@ -38,7 +37,7 @@ jobs:
           target: "/tmp/"
 
       - name: Move tar to deploy dir and run remote deploy script
-        uses: appleboy/ssh-action@v0.1.7
+        uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
@@ -54,5 +53,5 @@ jobs:
             sudo mv /tmp/remote_deploy.sh ${DEPLOY_DIR}/remote_deploy.sh
             sudo chown $USER:$USER ${DEPLOY_DIR}/remote_deploy.sh
             sudo chmod +x ${DEPLOY_DIR}/remote_deploy.sh
-            # run remote deploy script as the user (script will use sudo where required)
+            # run remote deploy script
             bash ${DEPLOY_DIR}/remote_deploy.sh ${DEPLOY_DIR}
