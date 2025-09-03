@@ -1,0 +1,58 @@
+name: CI / Deploy to VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (for packaging step)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dev deps (so package-lock can be generated if needed)
+        run: npm ci || npm install
+
+      - name: Create release tarball
+        run: |
+          TARFILE=upload.tar.gz
+          # Create tarball containing the repository files (excluding node_modules)
+          # We create it in the repo root
+          tar --exclude='./node_modules' -czf ${TARFILE} .
+
+      - name: Copy files to remote VM (upload tar + deploy script)
+        uses: appleboy/scp-action@v0.1.8
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "upload.tar.gz,deploy/remote_deploy.sh"
+          target: "/tmp/"
+
+      - name: Move tar to deploy dir and run remote deploy script
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -euo pipefail
+            DEPLOY_DIR="/opt/siddhartha-sayhello"
+            sudo mkdir -p ${DEPLOY_DIR}
+            sudo chown $USER:$USER ${DEPLOY_DIR}
+            # move uploaded files to DEPLOY_DIR
+            sudo mv /tmp/upload.tar.gz ${DEPLOY_DIR}/upload.tar.gz
+            sudo mv /tmp/remote_deploy.sh ${DEPLOY_DIR}/remote_deploy.sh
+            sudo chown $USER:$USER ${DEPLOY_DIR}/remote_deploy.sh
+            sudo chmod +x ${DEPLOY_DIR}/remote_deploy.sh
+            # run remote deploy script as the user (script will use sudo where required)
+            bash ${DEPLOY_DIR}/remote_deploy.sh ${DEPLOY_DIR}
