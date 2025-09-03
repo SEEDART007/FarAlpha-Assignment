@@ -23,9 +23,11 @@ jobs:
       - name: Create release tarball
         run: |
           TARFILE=upload.tar.gz
-          # Include everything in repo, excluding node_modules
-          tar --exclude='./node_modules' --warning=no-file-changed -czf ${TARFILE} .
+          # Create tarball excluding node_modules
+          # Suppress file-changed errors and never fail the step
+          tar --exclude='./node_modules' --warning=no-file-changed -czf ${TARFILE} . || true
           ls -lh ${TARFILE}
+
 
       - name: Copy tarball to remote VM
         uses: appleboy/scp-action@v0.1.7
